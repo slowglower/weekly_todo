@@ -1018,9 +1018,15 @@
 
       // 기본 담당자는 항상 보여주고, 새 담당자는 이번 주 업무가 있을 때만 보여줍니다.
       return Array.from(merged.values()).filter(owner => {
-        const isDefault = CONFIG.DEFAULT_OWNERS.some(defaultOwner => defaultOwner.id === owner.id);
-        return isDefault || taskOwnerIds.has(owner.id);
-      });
+  const hasTasks = taskOwnerIds.has(owner.id);
+
+  // PM은 이번 주 업무가 있을 때만 표시
+  if (owner.id === "pm") return hasTasks;
+
+  // 기획/디자인/개발은 기본 레인 유지
+  const isDefault = CONFIG.DEFAULT_OWNERS.some(defaultOwner => defaultOwner.id === owner.id);
+  return isDefault || hasTasks;
+});
     }
 
     async function loadFromApi() {
