@@ -1,0 +1,1063 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Notion Weekly Collaboration Timeline</title>
+  <style>
+    :root {
+      --bg: #f7f9f5;
+      --panel: #fffefb;
+      --panel-soft: #f3f7ef;
+      --panel-sky: #eef7fa;
+      --line: #dce6d8;
+      --line-soft: #edf3ea;
+      --text: #4f574c;
+      --muted: #7a8577;
+      --muted-soft: #a9b2a4;
+      --today: #91bdcd;
+      --today-soft: rgba(145, 189, 205, 0.14);
+      --shadow: rgba(79, 87, 76, 0.08);
+      --radius: 18px;
+      --owner-width: 148px;
+      --day-min: 118px;
+      --lane-height: 110px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background:
+        radial-gradient(circle at 12% 0%, rgba(213, 230, 201, 0.42), transparent 32%),
+        linear-gradient(135deg, #f7f9f5 0%, #f4f8f8 100%);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    .widget {
+      width: 100%;
+      max-width: 1220px;
+      margin: 0 auto;
+      background: rgba(255, 254, 251, 0.94);
+      border: 1px solid rgba(220, 230, 216, 0.95);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 14px 36px rgba(84, 105, 90, 0.08);
+      backdrop-filter: blur(10px);
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px 15px;
+      border-bottom: 1px solid var(--line-soft);
+      flex-wrap: wrap;
+      background: linear-gradient(180deg, rgba(255, 254, 251, 0.98), rgba(248, 251, 246, 0.96));
+    }
+
+    .title-block h1 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.35;
+      letter-spacing: -0.035em;
+      font-weight: 760;
+      color: var(--text);
+    }
+
+    .title-block p {
+      margin: 5px 0 0;
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    button, select {
+      height: 31px;
+      border: 1px solid var(--line);
+      background: rgba(255, 254, 251, 0.82);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 0 12px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+    }
+
+    button:hover, select:hover {
+      background: var(--panel-sky);
+      border-color: #c9dfe7;
+      box-shadow: 0 4px 12px rgba(145, 189, 205, 0.12);
+    }
+
+    button:active { transform: translateY(1px); }
+    select { padding-right: 26px; }
+
+    .sync-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 31px;
+      border: 1px solid var(--line);
+      background: rgba(255, 254, 251, 0.84);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 0 11px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .sync-badge::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #a9b2a4;
+    }
+
+    .sync-badge.live::before { background: #9cbd8e; }
+    .sync-badge.sample::before { background: #91bdcd; }
+    .sync-badge.error::before { background: #d7a59b; }
+
+    .chips {
+      display: flex;
+      gap: 7px;
+      padding: 11px 20px;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--line-soft);
+      background: rgba(255, 254, 251, 0.88);
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+      height: 29px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 0 11px;
+      font-size: 12px;
+      color: var(--muted);
+      background: transparent;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .chip:hover {
+      background: var(--panel-soft);
+      border-color: rgba(220, 230, 216, 0.74);
+    }
+
+    .chip.active {
+      color: var(--text);
+      background: #eef7fa;
+      border-color: #cfe3ea;
+      font-weight: 720;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--c);
+      display: inline-block;
+      flex: 0 0 auto;
+      box-shadow: inset 0 0 0 1px rgba(79, 87, 76, 0.08);
+    }
+
+    .timeline-scroll {
+      width: 100%;
+      overflow-x: auto;
+      position: relative;
+      background: rgba(255, 254, 251, 0.9);
+    }
+
+    .timeline {
+      min-width: calc(var(--owner-width) + var(--day-min) * 7);
+      position: relative;
+    }
+
+    .week-header {
+      display: grid;
+      grid-template-columns: var(--owner-width) repeat(7, minmax(var(--day-min), 1fr));
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: rgba(255, 254, 251, 0.94);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .corner {
+      padding: 12px 15px;
+      font-size: 12px;
+      color: var(--muted);
+      border-right: 1px solid var(--line);
+      background: rgba(243, 247, 239, 0.72);
+      font-weight: 640;
+    }
+
+    .day {
+      min-height: 52px;
+      padding: 10px 10px 8px;
+      border-right: 1px solid var(--line-soft);
+      background: rgba(255, 254, 251, 0.76);
+    }
+
+    .day:last-child { border-right: 0; }
+    .day .num { font-weight: 720; font-size: 15px; letter-spacing: -0.02em; }
+    .day .label { margin-top: 2px; font-size: 11px; color: var(--muted); }
+    .day.today { background: var(--today-soft); }
+    .day.today .num {
+      width: fit-content;
+      min-width: 27px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(145, 189, 205, 0.26);
+      color: #456978;
+    }
+
+    .lane {
+      display: grid;
+      grid-template-columns: var(--owner-width) minmax(calc(var(--day-min) * 7), 1fr);
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .lane:last-child { border-bottom: 0; }
+
+    .owner-cell {
+      position: sticky;
+      left: 0;
+      z-index: 20;
+      min-height: var(--lane-height);
+      padding: 14px 14px;
+      border-right: 1px solid var(--line);
+      background: rgba(248, 251, 246, 0.94);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 8px;
+    }
+
+    .owner-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 760;
+      letter-spacing: -0.02em;
+    }
+
+
+    .owner-count {
+      width: fit-content;
+      margin-top: 3px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--c, #b7cfa4) 20%, var(--line));
+      background: color-mix(in srgb, var(--c, #b7cfa4) 12%, #fffefb);
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .lane-track {
+      position: relative;
+      min-height: var(--lane-height);
+      padding: 0 8px;
+      background-image: linear-gradient(to right, rgba(237, 243, 234, 0.95) 1px, transparent 1px);
+      background-size: calc(100% / 7) 100%;
+      isolation: isolate;
+    }
+
+    .lane-track::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: calc((100% / 7) * var(--today-index));
+      width: calc(100% / 7);
+      background: rgba(145, 189, 205, 0.08);
+      display: var(--today-display, none);
+      pointer-events: none;
+    }
+
+    .task {
+      position: absolute;
+      top: calc(16px + var(--offset, 0px));
+      left: var(--left);
+      width: var(--width);
+      height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 13px;
+      border: 1px solid color-mix(in srgb, var(--c) 38%, #fffefb);
+      background: color-mix(in srgb, var(--c) 24%, #fffefb);
+      color: var(--text);
+      box-shadow: 0 3px 10px rgba(84, 105, 90, 0.035);
+      overflow: hidden;
+      cursor: pointer;
+      transition: box-shadow 130ms ease, border-color 130ms ease, background 130ms ease, outline-color 130ms ease, filter 130ms ease;
+      will-change: box-shadow;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      user-select: none;
+      text-decoration: none;
+    }
+
+    /*
+      겹친 영역에서 :hover만으로 z-index를 바꾸면
+      마우스 아래의 최상단 요소가 계속 바뀌며 깜빡일 수 있습니다.
+      그래서 hover 상태는 JS가 .is-hovered 클래스로 잠그고,
+      잠긴 동안 같은 레인의 다른 블록은 pointer-events를 잠시 끕니다.
+    */
+    .lane-track.hover-lock .task:not(.is-hovered) {
+      pointer-events: none;
+    }
+
+    .task.is-hovered,
+    .task:focus-visible {
+      z-index: 2147483647 !important;
+      background: color-mix(in srgb, var(--c) 30%, #fffefb);
+      box-shadow: 0 10px 24px rgba(84, 105, 90, 0.12);
+      border-color: color-mix(in srgb, var(--c) 64%, #fffefb);
+      outline: 2px solid rgba(255, 254, 251, 0.98);
+      outline-offset: 1px;
+    }
+
+    .task::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--c) 76%, #7f9f85);
+      box-shadow:
+        0 0 0 3px rgba(255, 254, 251, 0.62),
+        inset 0 0 0 1px rgba(79, 87, 76, 0.08);
+      flex: 0 0 8px;
+    }
+
+    .task strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      min-width: 0;
+    }
+
+    .task .meta {
+      flex: 0 0 auto;
+      font-size: 10px;
+      color: #667369;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.68);
+      border: 1px solid rgba(255, 254, 251, 0.5);
+    }
+
+    .task.done {
+      opacity: 0.54;
+      filter: saturate(0.55) brightness(0.98);
+    }
+
+    .task.done.is-hovered,
+    .task.done:focus-visible {
+      opacity: 0.54;
+      filter: saturate(0.55) brightness(0.98);
+    }
+
+    .task.blocked { border-style: dashed; }
+
+    .task .open-indicator {
+      flex: 0 0 auto;
+      font-size: 11px;
+      line-height: 1;
+      color: var(--muted);
+      opacity: 0.78;
+    }
+
+    .today-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: rgba(145, 189, 205, 0.82);
+      z-index: 18;
+      pointer-events: none;
+    }
+
+    .today-line::before {
+      content: "오늘";
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #91bdcd;
+      color: #fffefb;
+      font-size: 10px;
+      font-weight: 750;
+      white-space: nowrap;
+      box-shadow: 0 3px 10px rgba(145, 189, 205, 0.26);
+    }
+
+    .empty {
+      padding: 34px 18px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .legend {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 13px 20px 16px;
+      font-size: 11px;
+      color: var(--muted);
+      background: rgba(248, 251, 246, 0.9);
+      border-top: 1px solid var(--line-soft);
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      display: inline-block;
+      background: #a9b2a4;
+    }
+    .status-dot.todo { background: #a9b2a4; }
+    .status-dot.doing { background: #91bdcd; }
+    .status-dot.done { background: #9fbd8d; }
+    .status-dot.blocked { background: #d7a59b; }
+
+    @media (max-width: 720px) {
+      body { padding: 8px; }
+      :root { --owner-width: 116px; --day-min: 104px; --lane-height: 108px; }
+      .toolbar { align-items: flex-start; padding: 14px 14px 12px; }
+      .chips { padding: 10px 14px; }
+      .title-block h1 { font-size: 16px; }
+      .owner-cell { padding: 12px 10px; }
+      .task strong { font-size: 11px; }
+      .legend { padding: 12px 14px 14px; }
+    }
+  </style>
+
+</head>
+<body>
+  <main class="widget">
+    <section class="toolbar">
+      <div class="title-block">
+        <h1>협업 주간 타임라인</h1>
+      </div>
+      <div class="controls">
+        <button type="button" id="prevWeek">← 이전 주</button>
+        <button type="button" id="thisWeek">이번 주</button>
+        <button type="button" id="nextWeek">다음 주 →</button>
+        <select id="statusFilter" aria-label="상태 필터">
+          <option value="all">전체 상태</option>
+          <option value="todo">예정</option>
+          <option value="doing">진행중</option>
+          <option value="done">완료</option>
+          <option value="blocked">막힘</option>
+        </select>
+        <button type="button" id="refresh">새로고침</button>
+        <span class="sync-badge sample" id="syncBadge">샘플 데이터</span>
+      </div>
+    </section>
+
+    <section class="chips" id="ownerChips"></section>
+
+    <section class="timeline-scroll">
+      <div class="timeline" id="timeline">
+        <div class="week-header" id="weekHeader"></div>
+        <div id="lanes"></div>
+      </div>
+    </section>
+
+    <footer class="legend">
+      <span><i class="status-dot todo"></i>예정</span>
+      <span><i class="status-dot doing"></i>진행중</span>
+      <span><i class="status-dot done"></i>완료</span>
+      <span><i class="status-dot blocked"></i>막힘/확인 필요</span>
+    </footer>
+  </main>
+
+  <script>
+    /**
+     * 배포 후 같은 도메인의 /api/notion-tasks 를 호출합니다.
+     * 다른 주소에 API를 만들었다면 iframe URL에 ?api=https://.../api/notion-tasks 를 붙이면 됩니다.
+     */
+    const CONFIG = {
+      API_URL: new URLSearchParams(location.search).get("api") || "/api/notion-tasks",
+      USE_SAMPLE_WHEN_API_FAILS: true,
+      DEFAULT_OWNERS: [
+        // id는 Notion의 담당자 Select/Multi-select 값과 맞춰둡니다.
+        // 같은 이름이면 기존 레인에 들어가고, 여기 없는 담당자만 새 레인으로 추가됩니다.
+        { id: "기획", name: "기획", role: "", color: "#cfe3bf" },
+        { id: "디자인", name: "디자인", role: "", color: "#c8deeb" },
+        { id: "개발", name: "개발", role: "", color: "#dbe8c9" },
+        { id: "pm", name: "PM", role: "", color: "#d5e7ee" }
+      ],
+      PALETTE: ["#cfe3bf", "#c8deeb", "#dbe8c9", "#d5e7ee", "#b7d0a6", "#b6d4e4", "#e1ebd5", "#dfeff4"]
+    };
+
+    const SAMPLE_TASKS = [
+      { id: "s1", title: "설문조사 진행 · 인사이트 도출", ownerId: "기획", ownerName: "기획", start: isoFromOffset(0), end: isoFromOffset(1), status: "done" },
+      { id: "s2", title: "기능 명세 확정", ownerId: "기획", ownerName: "기획", start: isoFromOffset(1), end: isoFromOffset(2), status: "doing" },
+      { id: "s3", title: "정책서 보충 · 1차 확정", ownerId: "기획", ownerName: "기획", start: isoFromOffset(4), end: isoFromOffset(5), status: "todo" },
+      { id: "s4", title: "DS 확정 · 개발 전달", ownerId: "디자인", ownerName: "디자인", start: isoFromOffset(2), end: isoFromOffset(3), status: "todo" },
+      { id: "s5", title: "와이어프레임", ownerId: "디자인", ownerName: "디자인", start: isoFromOffset(3), end: isoFromOffset(5), status: "doing" },
+      { id: "s6", title: "UI 화면 확정", ownerId: "디자인", ownerName: "디자인", start: isoFromOffset(5), end: isoFromOffset(6), status: "todo" },
+      { id: "s7", title: "타이머 로직 검토", ownerId: "개발", ownerName: "개발", start: isoFromOffset(2), end: isoFromOffset(4), status: "todo" },
+      { id: "s8", title: "피드백 플로우 확인", ownerId: "개발", ownerName: "개발", start: isoFromOffset(4), end: isoFromOffset(5), status: "blocked" },
+      { id: "s9", title: "주간 진행 체크", ownerId: "pm", ownerName: "PM", start: isoFromOffset(0), end: isoFromOffset(0), status: "done" },
+      { id: "s10", title: "리뷰 미팅", ownerId: "pm", ownerName: "PM", start: isoFromOffset(4), end: isoFromOffset(4), status: "todo" },
+      { id: "s11", title: "동일 기간 겹침 테스트", ownerId: "디자인", ownerName: "디자인", start: isoFromOffset(3), end: isoFromOffset(5), status: "blocked" }
+    ];
+
+    const DAY = 24 * 60 * 60 * 1000;
+    const weekdays = ["월", "화", "수", "목", "금", "토", "일"];
+    let activeOwner = "all";
+    let activeStatus = "all";
+    let weekStart = startOfWeek(new Date());
+    let owners = [...CONFIG.DEFAULT_OWNERS];
+    let tasks = [...SAMPLE_TASKS];
+    let activeTaskEl = null;
+    let lastPointer = { x: -1, y: -1 };
+
+    function pointInRect(x, y, rect, buffer = 0) {
+      return x >= rect.left - buffer && x <= rect.right + buffer && y >= rect.top - buffer && y <= rect.bottom + buffer;
+    }
+
+    function restoreTaskLayer(el) {
+      if (!el) return;
+      const baseZIndex = el.dataset.baseZIndex || "1";
+      el.style.removeProperty("z-index");
+      el.style.zIndex = baseZIndex;
+    }
+
+    function raiseTaskLayer(el) {
+      if (!el) return;
+      if (!el.dataset.baseZIndex) el.dataset.baseZIndex = el.style.zIndex || "1";
+
+      // CSS :hover만으로 z-index를 바꾸면 겹친 영역에서 hit target이 흔들릴 수 있어,
+      // 실제 hover된 요소에 inline !important z-index를 부여하고 DOM의 마지막으로 보내 확실히 맨 위에 둡니다.
+      el.style.setProperty("z-index", "2147483647", "important");
+      el.parentElement?.appendChild(el);
+    }
+
+    function setActiveTask(el) {
+      if (activeTaskEl === el) return;
+      const prev = activeTaskEl;
+      const prevTrack = prev?.closest?.(".lane-track");
+      const nextTrack = el?.closest?.(".lane-track");
+
+      if (prev) {
+        prev.classList.remove("is-hovered");
+        restoreTaskLayer(prev);
+      }
+      if (prevTrack && prevTrack !== nextTrack) prevTrack.classList.remove("hover-lock");
+
+      activeTaskEl = el || null;
+
+      if (activeTaskEl) {
+        activeTaskEl.classList.add("is-hovered");
+        raiseTaskLayer(activeTaskEl);
+        nextTrack?.classList.add("hover-lock");
+      } else {
+        prevTrack?.classList.remove("hover-lock");
+      }
+    }
+
+    document.addEventListener("pointermove", (event) => {
+      lastPointer = { x: event.clientX, y: event.clientY };
+      if (!activeTaskEl) return;
+      const rect = activeTaskEl.getBoundingClientRect();
+      if (!pointInRect(event.clientX, event.clientY, rect, 2)) setActiveTask(null);
+    }, { passive: true });
+
+    document.addEventListener("pointerdown", (event) => {
+      if (activeTaskEl && !activeTaskEl.contains(event.target)) setActiveTask(null);
+    }, { passive: true });
+
+    function isoFromOffset(offset) {
+      const d = addDays(startOfWeek(new Date()), offset);
+      return toISODate(d);
+    }
+
+    function startOfDay(date) {
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    function startOfWeek(date) {
+      const d = startOfDay(date);
+      const day = d.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      d.setDate(d.getDate() + diff);
+      return d;
+    }
+
+    function addDays(date, n) {
+      const d = new Date(date);
+      d.setDate(d.getDate() + n);
+      return d;
+    }
+
+    function daysBetween(a, b) {
+      return Math.round((startOfDay(b) - startOfDay(a)) / DAY);
+    }
+
+    function sameDay(a, b) {
+      return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    }
+
+    function formatDate(date) {
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    }
+
+    function toISODate(date) {
+      const d = startOfDay(date);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    function parseDate(value) {
+      if (!value) return null;
+      if (value instanceof Date) return startOfDay(value);
+      if (typeof value === "string") {
+        const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+          const [, y, m, d] = match;
+          return startOfDay(new Date(Number(y), Number(m) - 1, Number(d)));
+        }
+      }
+      return startOfDay(value);
+    }
+
+    function statusText(status) {
+      return ({ todo: "예정", doing: "진행", done: "완료", blocked: "막힘" })[status] || status;
+    }
+
+    function overlapsWeek(task) {
+      const start = parseDate(task.start);
+      const end = parseDate(task.end || task.start);
+      const weekEnd = addDays(weekStart, 6);
+      return start && end && start <= weekEnd && end >= weekStart;
+    }
+
+    function normalizeTask(task) {
+      const start = parseDate(task.start);
+      const end = parseDate(task.end || task.start);
+      return {
+        ...task,
+        startDate: start,
+        endDate: end || start,
+        startOffset: daysBetween(weekStart, start),
+        endOffset: daysBetween(weekStart, end || start)
+      };
+    }
+
+    function filteredTasks() {
+      return tasks
+        .filter(overlapsWeek)
+        .map(normalizeTask)
+        .filter(task => {
+          const ownerOk = activeOwner === "all" || task.ownerId === activeOwner;
+          const statusOk = activeStatus === "all" || task.status === activeStatus;
+          return ownerOk && statusOk;
+        });
+    }
+
+    function distanceFromToday(task) {
+      const today = startOfDay(new Date());
+      if (today >= task.startDate && today <= task.endDate) return 0;
+      return Math.min(Math.abs(daysBetween(today, task.startDate)), Math.abs(daysBetween(today, task.endDate)));
+    }
+
+    function sameRange(a, b) {
+      return toISODate(a.startDate) === toISODate(b.startDate) && toISODate(a.endDate) === toISODate(b.endDate);
+    }
+
+    function layerScore(task) {
+      const today = startOfDay(new Date());
+      const containsToday = today >= task.startDate && today <= task.endDate;
+      const startsBeforeToday = task.startDate < today;
+      const startsToday = sameDay(task.startDate, today);
+      const isPast = task.endDate < today;
+      const isDone = task.status === "done";
+      const distance = distanceFromToday(task);
+
+      // 점수가 높을수록 겹친 영역에서 위에 보입니다.
+      // 완료 일정은 위로 끌어올리지 않고, 오늘을 포함하는 일정 중에서는
+      // 오늘 이전에 시작된 일정 > 오늘 시작 일정 순으로 우선합니다.
+      let score = 50000 - distance * 100;
+      if (containsToday) score += 30000;
+      if (containsToday && startsBeforeToday) score += 3000;
+      if (containsToday && startsToday) score += 1500;
+      if (isPast) score += 30; // 과거/미래가 같은 거리라면 과거 일정을 살짝 위로
+      if (isDone) score -= 60000;
+
+      return score;
+    }
+
+    function rangesOverlap(a, b) {
+      return a.startOffset <= b.endOffset && b.startOffset <= a.endOffset;
+    }
+
+    function applyOverlapOffsets(ownerTasks) {
+      const FULL_ROW_STEP = 48;
+      const STACK_STEP = 7;
+
+      const scored = ownerTasks
+        .map((task, index) => ({ ...task, originalIndex: index, score: layerScore(task) }))
+        .sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          if (a.startDate - b.startDate !== 0) return a.startDate - b.startDate;
+          if (a.endDate - b.endDate !== 0) return a.endDate - b.endDate;
+          return a.originalIndex - b.originalIndex;
+        });
+
+      const exactRangeIndex = new Map();
+      scored.forEach(task => {
+        const key = `${toISODate(task.startDate)}__${toISODate(task.endDate)}`;
+        const nextIndex = exactRangeIndex.get(key) || 0;
+        task.exactRow = nextIndex;
+        exactRangeIndex.set(key, nextIndex + 1);
+      });
+
+      return scored.map(task => {
+        const higherOverlaps = scored.filter(other =>
+          other.id !== task.id &&
+          other.score > task.score &&
+          rangesOverlap(task, other) &&
+          !sameRange(task, other)
+        ).length;
+
+        return {
+          ...task,
+          zIndex: Math.round(task.score + 100 - task.exactRow),
+          visualOffset: task.exactRow * FULL_ROW_STEP + Math.min(higherOverlaps, 5) * STACK_STEP
+        };
+      });
+    }
+
+    function taskClip(task) {
+      const start = Math.max(0, task.startOffset);
+      const end = Math.min(6, task.endOffset);
+      return { start, end };
+    }
+
+    function renderHeader() {
+      const header = document.getElementById("weekHeader");
+      const today = new Date();
+      header.innerHTML = `<div class="corner">담당자</div>`;
+      for (let i = 0; i < 7; i++) {
+        const date = addDays(weekStart, i);
+        const todayClass = sameDay(date, today) ? " today" : "";
+        header.innerHTML += `
+          <div class="day${todayClass}">
+            <div class="num">${formatDate(date)}</div>
+            <div class="label">${weekdays[i]}</div>
+          </div>`;
+      }
+    }
+
+    function renderOwnerChips() {
+      const chips = document.getElementById("ownerChips");
+      chips.innerHTML = `<button class="chip ${activeOwner === "all" ? "active" : ""}" data-owner="all">전체 담당자</button>`;
+      owners.forEach(owner => {
+        chips.innerHTML += `
+          <button class="chip ${activeOwner === owner.id ? "active" : ""}" data-owner="${owner.id}">
+            <span class="dot" style="--c:${owner.color}"></span>${owner.name}
+          </button>`;
+      });
+
+      chips.querySelectorAll(".chip").forEach(chip => {
+        chip.addEventListener("click", () => {
+          activeOwner = chip.dataset.owner;
+          render();
+        });
+      });
+    }
+
+    function ownerColor(ownerId, index) {
+      const owner = owners.find(o => o.id === ownerId);
+      return owner?.color || CONFIG.PALETTE[index % CONFIG.PALETTE.length];
+    }
+
+    function renderLanes() {
+      setActiveTask(null);
+      const lanes = document.getElementById("lanes");
+      const visibleTasks = filteredTasks();
+      const visibleOwners = owners.filter(owner => activeOwner === "all" || activeOwner === owner.id);
+      const todayIndex = daysBetween(weekStart, startOfDay(new Date()));
+      const showToday = todayIndex >= 0 && todayIndex <= 6;
+      lanes.innerHTML = "";
+
+      if (!visibleOwners.length) {
+        lanes.innerHTML = `<div class="empty">표시할 담당자가 없습니다.</div>`;
+        return;
+      }
+
+      visibleOwners.forEach((owner, ownerIndex) => {
+        const ownerTasks = applyOverlapOffsets(visibleTasks.filter(task => task.ownerId === owner.id));
+        const maxOffset = ownerTasks.length ? Math.max(...ownerTasks.map(t => t.visualOffset)) : 0;
+        const laneHeight = Math.max(112, 86 + maxOffset);
+
+        const lane = document.createElement("div");
+        lane.className = "lane";
+        lane.innerHTML = `
+          <div class="owner-cell" style="min-height:${laneHeight}px; --c:${owner.color}">
+            <div class="owner-name"><span class="dot" style="--c:${owner.color}"></span>${owner.name}</div>
+            <div class="owner-count" title="완료 상태는 제외한 개수입니다.">${ownerTasks.filter(task => task.status !== "done").length}개 일정</div>
+          </div>
+          <div class="lane-track" style="min-height:${laneHeight}px; --today-index:${todayIndex}; --today-display:${showToday ? "block" : "none"};"></div>
+        `;
+
+        const track = lane.querySelector(".lane-track");
+        ownerTasks.forEach(task => {
+          const { start, end } = taskClip(task);
+          if (start > 6 || end < 0) return;
+
+          const item = document.createElement("a");
+          item.className = `task ${task.status}`;
+          item.href = task.url || "#";
+          if (!task.url) item.addEventListener("click", e => e.preventDefault());
+          item.target = task.url ? "_blank" : "";
+          item.rel = task.url ? "noopener" : "";
+
+          const left = `calc(${(start / 7) * 100}% + 8px)`;
+          const width = `calc(${((end - start + 1) / 7) * 100}% - 16px)`;
+          item.style.setProperty("--c", ownerColor(task.ownerId, ownerIndex));
+          item.style.setProperty("--left", left);
+          item.style.setProperty("--width", width);
+          item.style.setProperty("--offset", `${task.visualOffset}px`);
+          item.style.zIndex = task.zIndex;
+          item.dataset.baseZIndex = String(task.zIndex);
+          item.title = `${task.title} · ${formatDate(task.startDate)}-${formatDate(task.endDate)} · ${owner.name} · ${statusText(task.status)}${task.url ? " · 클릭해서 Notion 페이지 열기" : ""}`;
+          item.innerHTML = `<strong>${task.title}</strong><span class="meta">${statusText(task.status)}</span>${task.url ? `<span class="open-indicator">↗</span>` : ""}`;
+
+          item.addEventListener("pointerenter", (event) => {
+            if (activeTaskEl && activeTaskEl !== item) {
+              const activeRect = activeTaskEl.getBoundingClientRect();
+              if (pointInRect(event.clientX, event.clientY, activeRect, 2)) return;
+            }
+            setActiveTask(item);
+          });
+
+          item.addEventListener("pointermove", (event) => {
+            lastPointer = { x: event.clientX, y: event.clientY };
+            if (activeTaskEl && activeTaskEl !== item) return;
+            setActiveTask(item);
+          });
+
+          item.addEventListener("pointerleave", () => {
+            window.setTimeout(() => {
+              if (activeTaskEl !== item) return;
+              const rect = item.getBoundingClientRect();
+              if (!pointInRect(lastPointer.x, lastPointer.y, rect, 2)) setActiveTask(null);
+            }, 40);
+          });
+
+          item.addEventListener("blur", () => {
+            if (activeTaskEl === item) setActiveTask(null);
+          });
+
+          track.appendChild(item);
+        });
+
+        lanes.appendChild(lane);
+      });
+    }
+
+    function renderTodayLine() {
+      document.querySelectorAll(".today-line").forEach(el => el.remove());
+      const todayIndex = daysBetween(weekStart, startOfDay(new Date()));
+      if (todayIndex < 0 || todayIndex > 6) return;
+
+      const timeline = document.getElementById("timeline");
+      const line = document.createElement("div");
+      line.className = "today-line";
+      line.style.left = `calc(var(--owner-width) + ((100% - var(--owner-width)) / 7) * ${todayIndex + 0.5})`;
+      timeline.appendChild(line);
+    }
+
+    function render() {
+      renderHeader();
+      renderOwnerChips();
+      renderLanes();
+      renderTodayLine();
+    }
+
+    function setSyncBadge(mode, text) {
+      const badge = document.getElementById("syncBadge");
+      badge.className = `sync-badge ${mode}`;
+      badge.textContent = text;
+    }
+
+    function compactOwnerKey(value = "") {
+      return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-");
+    }
+
+    const OWNER_ALIAS = new Map([
+      ["planner", "기획"],
+      ["planning", "기획"],
+      ["기획", "기획"],
+      ["plan", "기획"],
+      ["design", "디자인"],
+      ["designer", "디자인"],
+      ["디자인", "디자인"],
+      ["dev", "개발"],
+      ["developer", "개발"],
+      ["development", "개발"],
+      ["개발", "개발"],
+      ["pm", "pm"],
+      ["project-manager", "pm"],
+      ["프로젝트-매니저", "pm"],
+      ["미지정", "미지정"],
+      ["unknown", "미지정"]
+    ]);
+
+    function canonicalOwnerId(value = "") {
+      const raw = String(value || "").trim();
+      const key = compactOwnerKey(raw);
+      return OWNER_ALIAS.get(raw) || OWNER_ALIAS.get(key) || raw || "미지정";
+    }
+
+    function defaultOwnerById(ownerId) {
+      return CONFIG.DEFAULT_OWNERS.find(owner => owner.id === ownerId);
+    }
+
+    function normalizeRemoteData(remoteOwners = [], remoteTasks = []) {
+      const normalizedOwners = remoteOwners.map(owner => {
+        const id = canonicalOwnerId(owner.id || owner.name);
+        const fixed = defaultOwnerById(id);
+        return {
+          ...owner,
+          id,
+          name: fixed?.name || owner.name || id,
+          color: fixed?.color || owner.color,
+          role: fixed?.role || owner.role || ""
+        };
+      });
+
+      const normalizedTasks = remoteTasks.map(task => {
+        const id = canonicalOwnerId(task.ownerId || task.ownerName);
+        const fixed = defaultOwnerById(id);
+        return {
+          ...task,
+          ownerId: id,
+          ownerName: fixed?.name || task.ownerName || id
+        };
+      });
+
+      return { owners: normalizedOwners, tasks: normalizedTasks };
+    }
+
+    function buildOwnersFromTasks(remoteOwners, remoteTasks) {
+      const merged = new Map();
+      const taskOwnerIds = new Set((remoteTasks || tasks).map(task => task.ownerId));
+
+      // 기본 레인은 고정으로 유지합니다. 같은 이름의 Notion 담당자는 이 레인에 흡수됩니다.
+      CONFIG.DEFAULT_OWNERS.forEach(owner => merged.set(owner.id, owner));
+
+      // 기본 레인에 없는 담당자만 새 레인으로 추가합니다.
+      (remoteOwners || []).forEach((owner, index) => {
+        if (merged.has(owner.id)) return;
+        merged.set(owner.id, {
+          id: owner.id,
+          name: owner.name,
+          role: owner.role || "",
+          color: owner.color || CONFIG.PALETTE[index % CONFIG.PALETTE.length]
+        });
+      });
+
+      (remoteTasks || []).forEach((task, index) => {
+        if (merged.has(task.ownerId)) return;
+        merged.set(task.ownerId, {
+          id: task.ownerId,
+          name: task.ownerName || task.ownerId,
+          role: "",
+          color: CONFIG.PALETTE[index % CONFIG.PALETTE.length]
+        });
+      });
+
+      // 기본 담당자는 항상 보여주고, 새 담당자는 이번 주 업무가 있을 때만 보여줍니다.
+      return Array.from(merged.values()).filter(owner => {
+        const isDefault = CONFIG.DEFAULT_OWNERS.some(defaultOwner => defaultOwner.id === owner.id);
+        return isDefault || taskOwnerIds.has(owner.id);
+      });
+    }
+
+    async function loadFromApi() {
+      const weekEnd = addDays(weekStart, 6);
+      const url = `${CONFIG.API_URL}?start=${toISODate(weekStart)}&end=${toISODate(weekEnd)}`;
+      setSyncBadge("sample", "불러오는 중");
+      try {
+        const res = await fetch(url, { headers: { "Accept": "application/json" } });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        const data = await res.json();
+        if (!Array.isArray(data.tasks)) throw new Error("Invalid API response");
+
+        const normalized = normalizeRemoteData(data.owners, data.tasks);
+        tasks = normalized.tasks;
+        owners = buildOwnersFromTasks(normalized.owners, normalized.tasks);
+        setSyncBadge("live", `Notion 연동 · ${tasks.length}개`);
+      } catch (error) {
+        if (CONFIG.USE_SAMPLE_WHEN_API_FAILS) {
+          tasks = [...SAMPLE_TASKS];
+          owners = [...CONFIG.DEFAULT_OWNERS];
+          setSyncBadge("sample", "샘플 데이터");
+          console.warn("Notion API 연결 실패. 샘플 데이터를 표시합니다.", error);
+        } else {
+          tasks = [];
+          setSyncBadge("error", "연동 실패");
+        }
+      }
+      render();
+    }
+
+    document.getElementById("prevWeek").addEventListener("click", async () => { weekStart = addDays(weekStart, -7); await loadFromApi(); });
+    document.getElementById("thisWeek").addEventListener("click", async () => { weekStart = startOfWeek(new Date()); await loadFromApi(); });
+    document.getElementById("nextWeek").addEventListener("click", async () => { weekStart = addDays(weekStart, 7); await loadFromApi(); });
+    document.getElementById("refresh").addEventListener("click", loadFromApi);
+    document.getElementById("statusFilter").addEventListener("change", (e) => { activeStatus = e.target.value; render(); });
+
+    loadFromApi();
+  </script>
+</body>
+</html>
